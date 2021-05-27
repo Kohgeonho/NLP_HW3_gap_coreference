@@ -1,4 +1,36 @@
 import pandas as pd
+import nltk
+import re
+
+def tokenized_word_sets(row):
+    raw = row['Text']
+    words = nltk.word_tokenize(row['Text'])
+    tagged_words = nltk.pos_tag(words)
+    word_index = {}
+    index = 0
+
+    for i, word in enumerate(words):
+
+        if word in ["''", "``"]:
+            to_find = re.compile("''|``")
+            spaces = to_find.search(raw[index:]).start()
+        else:
+            spaces = raw[index:].index(word)
+
+        word_index[index+spaces] = i
+
+        if "'" in word:                             ## words like 'Abigail'
+            word_index[index+spaces+1] = i
+        elif "/" in word:                           ## words like Abigail/Bill
+            slash = raw[index:].index('/')
+            word_index[index+slash+1] = i
+        elif "." in word:                           ## words like Ms.Abigail
+            dots = [i for i in range(len(word)) if word[i] == '.'][-1]
+            word_index[index+spaces+dots+1] = i
+
+        index += spaces + len(word)
+
+    return words, tagged_words, word_index
 
 def print_sents(num_lines=10, datatype='train', random=True, datas={'manual':False, 'data':None}):
     
@@ -45,3 +77,12 @@ def print_sents(num_lines=10, datatype='train', random=True, datas={'manual':Fal
         count += 1
         if count > num_lines:
             break
+
+def accuracy(data):
+    right_count = 0
+    
+    for row in data.iloc:
+        if row['A-pred'] == row['A-coref'] and row['B-pred'] == row['B-coref']:
+            right_count += 1
+    
+    return right_count/len(data)
