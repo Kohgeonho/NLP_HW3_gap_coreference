@@ -78,6 +78,8 @@ def print_sents(num_lines=10, datatype='train', random=True, datas={'manual':Fal
         if count > num_lines:
             break
 
+
+
 def accuracy(data):
     right_count = 0
     
@@ -86,3 +88,18 @@ def accuracy(data):
             right_count += 1
     
     return right_count/len(data)
+
+def apply_model(data, func_list, pred):
+
+    filtered_data = data.copy()
+    for func in func_list:
+        mask = filtered_data.apply(func, axis=1)
+        filtered_data = filtered_data[mask]
+
+        pred_data = filtered_data.copy()
+        pred_data['A-pred'] = pred_data.apply(lambda row: pred(row)[0], axis=1)
+        pred_data['B-pred'] = pred_data.apply(lambda row: pred(row)[1], axis=1)
+
+    print(len(pred_data), accuracy(pred_data))
+
+    return pred_data
