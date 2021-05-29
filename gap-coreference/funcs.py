@@ -1,9 +1,11 @@
+from helper import *
+
 def word_subject(row):
     raw = row['Text']
-    words, tagged_words, word_index = tokenized_word_sets(row)
+    token_dict = tokenized_index(row)
 
-    A_id = row['A-offset']
-    B_id = row['B-offset']
+    tagged_words = token_dict['tagged_words']
+    word_index = token_dict['word_index']
 
     def next_word(word):
 
@@ -41,7 +43,10 @@ def none_subject(row):
 
 def different_sents(row):
     raw = row['Text']
-    words, tagged_words, word_index = tokenized_word_sets(row)
+    token_dict = tokenized_index(row)
+
+    words = token_dict['words']
+    word_index = token_dict['word_index']
 
     dots = [i for i, w in enumerate(words) if w == '.']
 

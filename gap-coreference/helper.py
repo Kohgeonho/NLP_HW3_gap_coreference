@@ -2,11 +2,14 @@ import pandas as pd
 import nltk
 import re
 
-def tokenized_word_sets(row):
+def tokenized_index(row):
     raw = row['Text']
     words = nltk.word_tokenize(row['Text'])
+    sents = [nltk.word_tokenize(sent) for sent in nltk.tokenize.sent_tokenize(raw)]
     tagged_words = nltk.pos_tag(words)
+    tagged_sents = [nltk.pos_tag(sent) for sent in sents]
     word_index = {}
+    sent_index = {}
     index = 0
 
     for i, word in enumerate(words):
@@ -30,7 +33,18 @@ def tokenized_word_sets(row):
 
         index += spaces + len(word)
 
-    return words, tagged_words, word_index
+    index = 0
+    for i, sent in enumerate(sents):
+        for word in sent:
+            sent_index[index] = i
+            index += 1
+
+    return {'words': words, 
+            'sents': sents,
+            'tagged_words': tagged_words,
+            'tagged_sents': tagged_sents,
+            'word_index': word_index,
+            'sent_index': sent_index}
 
 def print_sents(num_lines=10, datatype='train', random=True, datas={'manual':False, 'data':None}):
     
@@ -96,9 +110,9 @@ def apply_model(data, func_list, pred):
         mask = filtered_data.apply(func, axis=1)
         filtered_data = filtered_data[mask]
 
-        pred_data = filtered_data.copy()
-        pred_data['A-pred'] = pred_data.apply(lambda row: pred(row)[0], axis=1)
-        pred_data['B-pred'] = pred_data.apply(lambda row: pred(row)[1], axis=1)
+    pred_data = filtered_data.copy()
+    pred_data['A-pred'] = pred_data.apply(lambda row: pred(row)[0], axis=1)
+    pred_data['B-pred'] = pred_data.apply(lambda row: pred(row)[1], axis=1)
 
     print(len(pred_data), accuracy(pred_data))
 
