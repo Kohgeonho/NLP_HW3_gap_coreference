@@ -1,6 +1,7 @@
 import pandas as pd
 import nltk
 import re
+from tqdm import tqdm
 
 def tokenized_index(row):
     raw = row['Text']
@@ -68,6 +69,7 @@ def print_sents(num_lines=10, datatype='train', random=True, datas={'manual':Fal
     count = 1
     for row in lines.iloc:
 
+        Id = row['ID']
         sent = row['Text']
         pn, pn_id = row[['Pronoun', 'Pronoun-offset']]
         A, A_id = row[['A', 'A-offset']]
@@ -86,13 +88,11 @@ def print_sents(num_lines=10, datatype='train', random=True, datas={'manual':Fal
         for index, content, length in sorted(indices, reverse=True):
             sent = sent[:index] + content + sent[index+length:]
 
-        print(sent, end='\n\n')
+        print(Id, sent, end='\n\n')
 
         count += 1
         if count > num_lines:
             break
-
-
 
 def accuracy(data):
     right_count = 0
@@ -117,3 +117,50 @@ def apply_model(data, func_list, pred):
     print(len(pred_data), accuracy(pred_data))
 
     return pred_data
+
+def overall_analysis(data, func_list, preds):
+
+    pronouns = ['He', 'She', 'His', 'Her', 'he', 'she', 'his', 'him', 'her']
+    length = []
+    accrs = [[] for i in range(len(preds))]
+
+    for pronoun in tqdm(pronouns):
+        filtered_data = data.copy()
+        mask = filtered_data.apply(lambda row: row['Pronoun']==pronoun, axis=1)
+        filtered_data = filtered_data[mask]
+        for func in func_list:
+            mask = filtered_data.apply(func, axis=1)
+            filtered_data = filtered_data[mask]
+
+        if len(filtered_data) == 0:
+            length.append(0)
+            for accr in accrs:
+                accr.append(0)
+            continue
+
+        for i, pred in enumerate(preds):
+            pred_data = filtered_data.copy()
+            pred_data['A-pred'] = pred_data.apply(lambda row: pred(row)[0], axis=1)
+            pred_data['B-pred'] = pred_data.apply(lambda row: pred(row)[1], axis=1)
+
+            accrs[i].append(accuracy(pred_data))
+
+        length.append(len(filtered_data))
+
+    total_length= sum(length)
+    total_accrs = [sum([a * l for a, l in zip(accr, length)]) / total_length for accr in accrs]
+
+    pronouns.append('total')
+    length.append(total_length)
+    for i, accr in enumerate(accrs):
+        accr.append(total_accrs[i])
+
+    analysis_dict = {}
+    analysis_dict["Pronoun"] = pronouns
+    analysis_dict['Length'] = length
+    for i, accr in enumerate(accrs):
+        analysis_dict["Accuracy{}".format(i)] = accr
+
+    analysis = pd.DataFrame(analysis_dict)
+
+    return analysis
