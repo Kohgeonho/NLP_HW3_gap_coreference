@@ -42,8 +42,6 @@ def different_sents(row):
     words = token_dict['words']
     word_index = token_dict['word_index']
 
-    dots = [i for i, w in enumerate(words) if w == '.']
-
     pro_id = word_index[row['Pronoun-offset']]
     A_id = word_index[row['A-offset']]
     B_id = word_index[row['B-offset']]
