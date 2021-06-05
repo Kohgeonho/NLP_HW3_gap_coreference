@@ -13,6 +13,11 @@ def tokenized_index(row):
     sent_index = {}
     index = 0
 
+    def symbols(index, symbol, word, i):
+        syms = [ind for ind, c in enumerate(word) if c==symbol]
+        for ind in syms:
+            word_index[index+ind+1]=i
+
     for i, word in enumerate(words):
 
         if word in ["''", "``"]:
@@ -26,11 +31,12 @@ def tokenized_index(row):
         if "'" in word:                             ## words like 'Abigail'
             word_index[index+spaces+1] = i
         elif "/" in word:                           ## words like Abigail/Bill
-            slash = raw[index:].index('/')
-            word_index[index+slash+1] = i
+            symbols(index+spaces, '/', word, i)
         elif "." in word:                           ## words like Ms.Abigail
             dots = [i for i in range(len(word)) if word[i] == '.'][-1]
             word_index[index+spaces+dots+1] = i
+        elif "-" in word:                           ## words like Ask-Elizabeth
+            symbols(index+spaces, '-', word, i)
 
         index += spaces + len(word)
 
@@ -120,7 +126,7 @@ def apply_model(data, func_list, pred):
 
 def overall_analysis(data, func_list, preds):
 
-    pronouns = ['He', 'She', 'His', 'Her', 'he', 'she', 'his', 'him', 'her']
+    pronouns = ['He', 'She', 'His', 'Her', 'he', 'she', 'his', 'him', 'her', 'hers']
     length = []
     accrs = [[] for i in range(len(preds))]
 
