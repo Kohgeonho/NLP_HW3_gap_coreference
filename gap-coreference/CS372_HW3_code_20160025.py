@@ -1,4 +1,59 @@
-from helper import *
+import pandas as pd
+import nltk
+import re
+
+def tokenized_index(row):
+    raw = row['Text']
+    words = nltk.word_tokenize(row['Text'])
+    sents = [nltk.word_tokenize(sent) for sent in nltk.tokenize.sent_tokenize(raw)]
+    tagged_words = nltk.pos_tag(words)
+    tagged_sents = [nltk.pos_tag(sent) for sent in sents]
+    word_index = {}
+    sent_index = {}
+    index = 0
+
+    def symbols(index, symbol, word, i):
+        syms = [ind for ind, c in enumerate(word) if c==symbol]
+        for ind in syms:
+            word_index[index+ind+1]=i
+
+    for i, word in enumerate(words):
+
+        if word in ["''", "``"]:
+            to_find = re.compile("''|``")
+            spaces = to_find.search(raw[index:]).start()
+        else:
+            spaces = raw[index:].index(word)
+
+        word_index[index+spaces] = i
+
+        if "'" in word:                             ## words like 'Abigail'
+            word_index[index+spaces+1] = i
+        elif "/" in word:                           ## words like Abigail/Bill
+            symbols(index+spaces, '/', word, i)
+        elif "." in word:                           ## words like Ms.Abigail
+            dots = [i for i in range(len(word)) if word[i] == '.'][-1]
+            word_index[index+spaces+dots+1] = i
+        elif "-" in word:                           ## words like Ask-Elizabeth
+            symbols(index+spaces, '-', word, i)
+
+        index += spaces + len(word)
+
+    index = 0
+    for i, sent in enumerate(sents):
+        for word in sent:
+            sent_index[index] = i
+            index += 1
+
+    return {'words': words, 
+            'sents': sents,
+            'tagged_words': tagged_words,
+            'tagged_sents': tagged_sents,
+            'word_index': word_index,
+            'sent_index': sent_index}
+
+train_data = pd.read_csv('gap-development.tsv', sep='\t')
+test_data  = pd.read_csv('gap-test.tsv', sep='\t')
 
 def word_subject(row):
     token_dict = tokenized_index(row)
@@ -34,37 +89,6 @@ def both_subject(row):
 
 def none_subject(row):
     return word_subject(row) == (False, False)
-
-def different_sents(row):
-    raw = row['Text']
-    token_dict = tokenized_index(row)
-
-    words = token_dict['words']
-    word_index = token_dict['word_index']
-
-    pro_id = word_index[row['Pronoun-offset']]
-    A_id = word_index[row['A-offset']]
-    B_id = word_index[row['B-offset']]
-
-    def between(id1, id2):
-        if id1 > id2:
-            id1, id2 = id2, id1
-        dots = [i for i, w in enumerate(words[id1:id2]) if w == '.']
-        if len(dots) > 0:
-            return True
-        else:
-            return False
-
-    return (between(pro_id, A_id), between(pro_id, B_id))
-
-def both_different_sents(row):
-    return different_sents(row) == (True, True)
-
-def only_different_sents(row):
-    return sum(different_sents(row)) == 1
-
-def none_different_sents(row):
-    return different_sents(row) == (False, False)
 
 def former_word(row):
     if row['A-offset'] < row['B-offset']:
@@ -322,3 +346,30 @@ def subject(row):
 
     else:
         print("error cases : no subject")
+
+
+
+def apply_model(data, func_list, pred):
+
+    filtered_data = data.copy()
+    for func in func_list:
+        mask = filtered_data.apply(func, axis=1)
+        filtered_data = filtered_data[mask]
+
+    pred_data = filtered_data.copy()
+    pred_data['A-pred'] = pred_data.apply(lambda row: pred(row)[0], axis=1)
+    pred_data['B-pred'] = pred_data.apply(lambda row: pred(row)[1], axis=1)
+
+    return pred_data
+
+subject_data = apply_model(test_data, [], subject)
+
+result = open("CS372_HW3_snippet_output_20160025.tsv", 'w')
+result2= open("CS372_HW3_page_output_20160025.tsv", "w")
+
+for row in subject_data.iloc:
+
+    result.write("\t".join([row['ID'], str(row['A-pred']), str(row['B-pred'])]) + "\n")
+    result2.write("\t".join([row['ID'], str(row['A-pred']), str(row['B-pred'])]) + "\n")
+
+result.close()

@@ -126,7 +126,7 @@ def apply_model(data, func_list, pred):
 
 def overall_analysis(data, func_list, preds):
 
-    pronouns = ['He', 'She', 'His', 'Her', 'he', 'she', 'his', 'him', 'her', 'hers']
+    pronouns = ['He', 'She', 'His', 'Her', 'he', 'she', 'his', 'him', 'her', 'hers'x]
     length = []
     accrs = [[] for i in range(len(preds))]
 
